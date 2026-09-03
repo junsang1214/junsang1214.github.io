@@ -25,9 +25,9 @@
     <!-- 1층: 경제 지표 (코스피, 환율) -->
     <div class="card">
       <h3>코스피 (KOSPI)</h3>
-      <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">데이터 연결 중...</div>
+      <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">구글 시트 데이터 로딩 중...</div>
       <img id="kospi-chart" src="https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png" alt="실시간 코스피 차트" style="width: 100%; border-radius: 4px;">
-      <div class="poll-source">* 네이버 증권 실시간 연동</div>
+      <div class="poll-source">* 구글 파이낸스 연동 (서버 차단 없음)</div>
     </div>
 
     <div class="card">
@@ -90,36 +90,10 @@
   </div>
 
   <script>
-    // 1. 코스피 가져오기 (가장 안정적인 corsproxy.io 통로로 전면 교체)
-    function updateKospi() {
-      const targetUrl = 'https://m.stock.naver.com/api/index/KOSPI/basic';
-      fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl))
-        .then(res => res.json())
-        .then(data => {
-          const price = data.closePrice; 
-          const change = data.compareToPreviousClosePrice.replace('+', '');
-          const changePct = data.fluctuationsRatio.replace('+', '');
-          
-          let color = '#333';
-          let sign = '';
-          if (parseFloat(changePct) > 0) { color = '#d32f2f'; sign = '+'; }
-          else if (parseFloat(changePct) < 0) { color = '#1976d2'; }
-          
-          document.getElementById('kospi-number').innerHTML = 
-            `<span style="font-size: 28px; font-weight: bold; color: ${color};">${price}</span> 
-             <span style="font-size: 15px; color: ${color}; margin-left: 8px;">${sign}${change} (${sign}${changePct}%)</span>`;
-             
-          document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
-        })
-        .catch(err => {
-          console.log("코스피 데이터 연결 지연");
-          document.getElementById('kospi-number').innerHTML = `<span style="font-size: 14px; color: #d32f2f; font-weight: bold;">일시적 연결 지연 (아래 차트를 참고하세요)</span>`;
-          document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
-        });
-    }
-
-    updateKospi();
-    setInterval(updateKospi, 30000); 
+    // 1. 코스피 차트 이미지만 실시간으로 갱신 (이미지는 네이버가 차단하지 않음)
+    setInterval(function() {
+      document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
+    }, 30000);
 
     // 2. 구글 뉴스 가져오기
     function fetchNews(keyword, elementId) {
@@ -136,22 +110,18 @@
               newsHtml += `<li><a href="${item.link}" target="_blank" style="color: #2c3e50; text-decoration: none;">${item.title}</a></li>`;
             });
             document.getElementById(elementId).innerHTML = newsHtml;
-          } else {
-            document.getElementById(elementId).innerHTML = "<li>뉴스를 불러오지 못했습니다.</li>";
           }
         })
-        .catch(err => {
-          document.getElementById(elementId).innerHTML = "<li>뉴스 로딩 중 오류가 발생했습니다.</li>";
-        });
+        .catch(err => console.log("뉴스 로딩 지연"));
     }
 
     fetchNews('한국갤럽 지지율', 'news-list-gallup');
     fetchNews('리얼미터 지지율', 'news-list-realmeter');
 
-    // 3. 지지율 그래프 2개 그리기
+    // 3. 만능 구글 시트 연동 (그래프 + 코스피 수치 동시에 가져오기)
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcrpXqyXnwBL7AJ7K51EtGS64VAVHzPGswF-dCXE9LVMFSZZS040xdhkrqkyrccJs1LbGYRvetNIgm/pub?output=csv';
     
-    fetch(sheetUrl)
+    fetch(sheetUrl + '&nocache=' + Date.now())
       .then(res => res.text())
       .then(csv => {
         const rows = csv.split('\n').filter(row => row.trim() !== '');
@@ -162,20 +132,47 @@
         const partyBData = []; 
 
         rows.forEach((row, index) => {
-          if (index === 0) return; 
-          const cols = row.split(',');
+          // 쉼표(,)가 포함된 숫자 등 CSV 에러 방지를 위한 텍스트 분리 정규식
+          const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+          
+          if (index === 0) { 
+            // 구글 시트 1번째 줄의 F1(6번째), G1(7번째) 칸에서 코스피 숫자를 읽어옵니다.
+            if (cols.length >= 7 && cols[5].trim() !== '') {
+              // 따옴표나 쉼표 등 불순물 제거
+              const cleanPrice = cols[5].replace(/"/g, '').replace(/,/g, '').trim();
+              const cleanChange = cols[6].replace(/"/g, '').replace(/,/g, '').trim();
+              
+              const kospiPrice = parseFloat(cleanPrice).toFixed(2);
+              const kospiChange = parseFloat(cleanChange).toFixed(2);
+
+              if (!isNaN(kospiPrice)) {
+                let color = '#333';
+                let sign = '';
+                if (kospiChange > 0) { color = '#d32f2f'; sign = '+'; }
+                else if (kospiChange < 0) { color = '#1976d2'; }
+
+                document.getElementById('kospi-number').innerHTML = 
+                  `<span style="font-size: 28px; font-weight: bold; color: ${color};">${kospiPrice}</span> 
+                   <span style="font-size: 15px; color: ${color}; margin-left: 8px;">(${sign}${kospiChange}%)</span>`;
+              }
+            } else {
+              document.getElementById('kospi-number').innerHTML = `<span style="font-size: 14px; color: #d32f2f;">구글 시트 F1, G1 칸에 수식을 넣어주세요.</span>`;
+            }
+            return; 
+          }
+          
           if (cols.length >= 3) {
-            labels.push(cols[0].trim()); 
-            posData.push(parseFloat(cols[1].trim())); 
-            negData.push(parseFloat(cols[2].trim())); 
+            labels.push(cols[0].replace(/"/g, '').trim()); 
+            posData.push(parseFloat(cols[1].replace(/"/g, '').trim())); 
+            negData.push(parseFloat(cols[2].replace(/"/g, '').trim())); 
           }
           if (cols.length >= 5) {
-            partyAData.push(parseFloat(cols[3].trim())); 
-            partyBData.push(parseFloat(cols[4].trim())); 
+            partyAData.push(parseFloat(cols[3].replace(/"/g, '').trim())); 
+            partyBData.push(parseFloat(cols[4].replace(/"/g, '').trim())); 
           }
         });
 
-        // 3-1. 대통령 지지율 그래프
+        // 그래프 렌더링
         const ctxPresident = document.getElementById('poll-chart-president').getContext('2d');
         new Chart(ctxPresident, {
           type: 'line',
@@ -189,7 +186,6 @@
           options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
         });
 
-        // 3-2. 정당 지지율 그래프
         const ctxParty = document.getElementById('poll-chart-party').getContext('2d');
         new Chart(ctxParty, {
           type: 'line',
@@ -204,7 +200,7 @@
         });
 
       })
-      .catch(err => console.log("그래프 데이터를 불러오는 데 실패했습니다."));
+      .catch(err => console.log("데이터를 불러오는 데 실패했습니다."));
   </script>
 </body>
 </html>
