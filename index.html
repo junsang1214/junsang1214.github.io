@@ -25,7 +25,7 @@
     <!-- 1층: 경제 지표 (코스피, 환율) -->
     <div class="card">
       <h3>코스피 (KOSPI)</h3>
-      <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">수치 로딩중...</div>
+      <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">데이터 연결 중...</div>
       <img id="kospi-chart" src="https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png" alt="실시간 코스피 차트" style="width: 100%; border-radius: 4px;">
       <div class="poll-source">* 네이버 증권 실시간 연동</div>
     </div>
@@ -90,10 +90,10 @@
   </div>
 
   <script>
-    // 1. 코스피 가져오기 (AllOrigins 우회 서버)
+    // 1. 코스피 가져오기 (가장 안정적인 corsproxy.io 통로로 전면 교체)
     function updateKospi() {
       const targetUrl = 'https://m.stock.naver.com/api/index/KOSPI/basic';
-      fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl + '&nocache=' + Date.now()))
+      fetch('https://corsproxy.io/?' + encodeURIComponent(targetUrl))
         .then(res => res.json())
         .then(data => {
           const price = data.closePrice; 
@@ -111,7 +111,11 @@
              
           document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
         })
-        .catch(err => console.log("코스피 갱신 대기 중..."));
+        .catch(err => {
+          console.log("코스피 데이터 연결 지연");
+          document.getElementById('kospi-number').innerHTML = `<span style="font-size: 14px; color: #d32f2f; font-weight: bold;">일시적 연결 지연 (아래 차트를 참고하세요)</span>`;
+          document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
+        });
     }
 
     updateKospi();
@@ -154,8 +158,8 @@
         const labels = [];
         const posData = []; 
         const negData = []; 
-        const partyAData = []; // 국민의힘 (기존 시트 D열)
-        const partyBData = []; // 더불어민주당 (기존 시트 E열)
+        const partyAData = []; 
+        const partyBData = []; 
 
         rows.forEach((row, index) => {
           if (index === 0) return; 
@@ -171,29 +175,29 @@
           }
         });
 
-        // 3-1. 대통령 지지율 그래프 (긍정=파랑, 부정=빨강)
+        // 3-1. 대통령 지지율 그래프
         const ctxPresident = document.getElementById('poll-chart-president').getContext('2d');
         new Chart(ctxPresident, {
           type: 'line',
           data: {
             labels: labels,
             datasets: [
-              { label: '긍정 평가 (%)', data: posData, borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)', borderWidth: 2, pointBackgroundColor: '#1976d2', tension: 0.3, fill: true }, // 파란색
-              { label: '부정 평가 (%)', data: negData, borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)', borderWidth: 2, pointBackgroundColor: '#d32f2f', tension: 0.3, fill: true } // 빨간색
+              { label: '긍정 평가 (%)', data: posData, borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)', borderWidth: 2, pointBackgroundColor: '#1976d2', tension: 0.3, fill: true }, 
+              { label: '부정 평가 (%)', data: negData, borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)', borderWidth: 2, pointBackgroundColor: '#d32f2f', tension: 0.3, fill: true } 
             ]
           },
           options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
         });
 
-        // 3-2. 정당 지지율 그래프 (더불어민주당=파랑 우선, 국민의힘=빨강)
+        // 3-2. 정당 지지율 그래프
         const ctxParty = document.getElementById('poll-chart-party').getContext('2d');
         new Chart(ctxParty, {
           type: 'line',
           data: {
             labels: labels,
             datasets: [
-              { label: '더불어민주당 (%)', data: partyBData, borderColor: '#004ea2', backgroundColor: 'rgba(0, 78, 162, 0.1)', borderWidth: 2, pointBackgroundColor: '#004ea2', tension: 0.3, fill: true }, // 파란색 (E열 데이터)
-              { label: '국민의힘 (%)', data: partyAData, borderColor: '#e61e2b', backgroundColor: 'rgba(230, 30, 43, 0.1)', borderWidth: 2, pointBackgroundColor: '#e61e2b', tension: 0.3, fill: true } // 빨간색 (D열 데이터)
+              { label: '더불어민주당 (%)', data: partyBData, borderColor: '#004ea2', backgroundColor: 'rgba(0, 78, 162, 0.1)', borderWidth: 2, pointBackgroundColor: '#004ea2', tension: 0.3, fill: true }, 
+              { label: '국민의힘 (%)', data: partyAData, borderColor: '#e61e2b', backgroundColor: 'rgba(230, 30, 43, 0.1)', borderWidth: 2, pointBackgroundColor: '#e61e2b', tension: 0.3, fill: true } 
             ]
           },
           options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
