@@ -15,6 +15,7 @@
     
     .dday-card { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; text-align: center; }
     .dday-card h3 { color: white; margin-bottom: 5px; }
+    .dday-info { font-size: 13px; opacity: 0.8; margin-top: 4px;}
     
     .insight-card { border-left: 6px solid #ffca28; background-color: #fffdf5; }
     #insight-input { width: 100%; height: 80px; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: none; font-family: inherit; font-size: 14px; box-sizing: border-box; background-color: white;}
@@ -31,11 +32,14 @@
 
   <div class="grid-container">
     
-    <!-- 1층: D-Day 카운터 및 주간 인사이트 -->
+    <!-- 1층: D-Day 카운터 (국회의원 선거) 및 주간 인사이트 -->
     <div class="card dday-card">
-      <h3>🗳️ 다음 대통령 선거</h3>
+      <h3>🗳️ 다음 국회의원 선거</h3>
       <div id="dday-counter" style="font-size: 32px; font-weight: bold; margin: 10px 0;">계산 중...</div>
-      <div style="font-size: 13px; opacity: 0.8;">제21대 대선 (2027년 3월 3일)</div>
+      <div class="dday-info">제23대 국회의원 선거 (2028년 4월 12일 예정)</div>
+      <div class="dday-info">---</div>
+      <div class="dday-info">제21대 대선 완료 (2025년 6월 3일)</div>
+      <div class="dday-info">제9회 지방선거 완료 (2026년 6월 3일)</div>
     </div>
 
     <div class="card insight-card">
@@ -94,14 +98,13 @@
 
   <script>
     // ==========================================
-    // 🚨 여기에 2단계에서 복사한 '웹 앱 URL'을 붙여넣으세요! (따옴표 안에)
+    // 🚨 여기에 2단계에서 복사한 '웹 앱 URL'을 다시 붙여넣으세요! (따옴표 안에)
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzIqIdWtcHPyoP22XYunAZdr4bl-p1OQgxbBc5D0F7yH6Fx7-dwY4sLr7PkX_hvOkI7/exec";
     // ==========================================
 
     const insightBox = document.getElementById('insight-input');
     const msg = document.getElementById('save-msg');
 
-    // 홈페이지 열릴 때 서버(구글 시트)에서 메모 불러오기
     fetch(GAS_URL)
       .then(res => res.text())
       .then(text => {
@@ -110,7 +113,6 @@
       })
       .catch(err => { insightBox.placeholder = "연결 지연..."; });
 
-    // 저장 버튼 누르면 서버(구글 시트)로 메모 보내기
     function saveInsight() {
       msg.innerText = "저장 중...";
       fetch(GAS_URL + '?action=save&memo=' + encodeURIComponent(insightBox.value))
@@ -122,9 +124,9 @@
         .catch(err => { msg.innerText = "저장 실패"; });
     }
 
-    // 1. D-Day 카운터
+    // 1. D-Day 카운터 (2028년 국회의원 선거 기준)
     function calculateDday() {
-      const dday = new Date("2027-03-03T00:00:00+09:00");
+      const dday = new Date("2028-04-12T00:00:00+09:00");
       const today = new Date();
       const gap = dday.getTime() - today.getTime();
       const days = Math.ceil(gap / (1000 * 60 * 60 * 24));
@@ -133,10 +135,8 @@
     }
     calculateDday();
 
-    // 2. 코스피 차트 갱신
     setInterval(function() { document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now(); }, 30000);
 
-    // 3. 구글 뉴스
     function fetchNews(keyword, elementId) {
       const rssUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(keyword) + '&hl=ko&gl=KR&ceid=KR:ko';
       fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
@@ -154,7 +154,6 @@
     fetchNews('한국갤럽 지지율', 'news-list-gallup');
     fetchNews('리얼미터 지지율', 'news-list-realmeter');
 
-    // 4. 구글 시트 데이터 (코스피 + 그래프)
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcrpXqyXnwBL7AJ7K51EtGS64VAVHzPGswF-dCXE9LVMFSZZS040xdhkrqkyrccJs1LbGYRvetNIgm/pub?output=csv';
     fetch(sheetUrl + '&nocache=' + Date.now())
       .then(res => res.text())
