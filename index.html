@@ -12,6 +12,14 @@
     .card h3 { margin-top: 0; color: #2c3e50; font-size: 18px; margin-bottom: 15px;}
     .full-width { grid-column: 1 / -1; }
     .poll-source { text-align: right; font-size: 12px; color: #888; margin-top: 10px; }
+    
+    /* D-Day 카드 특별 스타일 (파란색 그라데이션) */
+    .dday-card { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; text-align: center; }
+    .dday-card h3 { color: white; margin-bottom: 5px; }
+    
+    /* 인사이트 카드 특별 스타일 (노란색 띠) */
+    .insight-card { border-left: 6px solid #ffca28; background-color: #fffdf5; }
+    
     @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,12 +30,26 @@
 
   <div class="grid-container">
     
-    <!-- 1층: 경제 지표 (코스피, 환율) -->
+    <!-- 1층: D-Day 카운터 및 주간 인사이트 (새로 추가됨) -->
+    <div class="card dday-card">
+      <h3>🗳️ 다음 대통령 선거</h3>
+      <div id="dday-counter" style="font-size: 32px; font-weight: bold; margin: 10px 0;">계산 중...</div>
+      <div style="font-size: 13px; opacity: 0.8;">제21대 대선 (2027년 3월 3일)</div>
+    </div>
+
+    <div class="card insight-card">
+      <h3>💡 나의 주간 인사이트</h3>
+      <div id="weekly-insight" style="font-size: 15px; line-height: 1.6; color: #444; margin-top: 10px; word-break: keep-all;">
+        구글 시트(H2 칸)에서 인사이트를 불러오는 중...
+      </div>
+    </div>
+
+    <!-- 2층: 경제 지표 (코스피, 환율) -->
     <div class="card">
       <h3>코스피 (KOSPI)</h3>
       <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">구글 시트 데이터 로딩 중...</div>
       <img id="kospi-chart" src="https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png" alt="실시간 코스피 차트" style="width: 100%; border-radius: 4px;">
-      <div class="poll-source">* 구글 파이낸스 연동 (서버 차단 없음)</div>
+      <div class="poll-source">* 구글 파이낸스 연동</div>
     </div>
 
     <div class="card">
@@ -50,25 +72,25 @@
       </div>
     </div>
 
-    <!-- 2층: 대통령 국정 지지율 그래프 -->
+    <!-- 3층: 대통령 국정 지지율 그래프 -->
     <div class="card full-width">
       <h3>📈 대통령 국정 지지율 추이</h3>
       <div style="height: 300px; width: 100%;">
         <canvas id="poll-chart-president"></canvas>
       </div>
-      <div class="poll-source">* 구글 스프레드시트 연동 (B열, C열)</div>
+      <div class="poll-source">* 구글 스프레드시트 연동</div>
     </div>
 
-    <!-- 3층: 정당 지지율 그래프 -->
+    <!-- 4층: 정당 지지율 그래프 -->
     <div class="card full-width">
       <h3>📈 주요 정당 지지율 추이</h3>
       <div style="height: 300px; width: 100%;">
         <canvas id="poll-chart-party"></canvas>
       </div>
-      <div class="poll-source">* 구글 스프레드시트 연동 (D열, E열)</div>
+      <div class="poll-source">* 구글 스프레드시트 연동</div>
     </div>
 
-    <!-- 4층: 뉴스 게시판 (한국갤럽, 리얼미터) -->
+    <!-- 5층: 뉴스 게시판 (한국갤럽, 리얼미터) -->
     <div class="card">
       <h3>📰 한국갤럽 지지율 뉴스</h3>
       <div style="margin-top: 15px; font-size: 14px; color: #555;">
@@ -90,12 +112,28 @@
   </div>
 
   <script>
-    // 1. 코스피 차트 이미지만 실시간으로 갱신 (이미지는 네이버가 차단하지 않음)
+    // 1. D-Day 카운터 계산 (2027년 3월 3일 기준)
+    function calculateDday() {
+      const dday = new Date("2027-03-03T00:00:00+09:00");
+      const today = new Date();
+      const gap = dday.getTime() - today.getTime();
+      const days = Math.ceil(gap / (1000 * 60 * 60 * 24));
+      
+      let ddayText = "";
+      if (days > 0) ddayText = `D - ${days}`;
+      else if (days === 0) ddayText = "D - Day";
+      else ddayText = `D + ${Math.abs(days)}`;
+      
+      document.getElementById('dday-counter').innerText = ddayText;
+    }
+    calculateDday();
+
+    // 2. 코스피 차트 이미지 실시간 갱신 (30초)
     setInterval(function() {
       document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
     }, 30000);
 
-    // 2. 구글 뉴스 가져오기
+    // 3. 구글 뉴스 가져오기
     function fetchNews(keyword, elementId) {
       const rssUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(keyword) + '&hl=ko&gl=KR&ceid=KR:ko';
       const apiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl);
@@ -118,7 +156,7 @@
     fetchNews('한국갤럽 지지율', 'news-list-gallup');
     fetchNews('리얼미터 지지율', 'news-list-realmeter');
 
-    // 3. 만능 구글 시트 연동 (그래프 + 코스피 수치 동시에 가져오기)
+    // 4. 만능 구글 시트 연동 (코스피 수치 + 그래프 + 주간 인사이트)
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcrpXqyXnwBL7AJ7K51EtGS64VAVHzPGswF-dCXE9LVMFSZZS040xdhkrqkyrccJs1LbGYRvetNIgm/pub?output=csv';
     
     fetch(sheetUrl + '&nocache=' + Date.now())
@@ -132,35 +170,39 @@
         const partyBData = []; 
 
         rows.forEach((row, index) => {
-          // 쉼표(,)가 포함된 숫자 등 CSV 에러 방지를 위한 텍스트 분리 정규식
-          const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+          const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // 쉼표 포함 문자열 안전 분리
           
           if (index === 0) { 
-            // 구글 시트 1번째 줄의 F1(6번째), G1(7번째) 칸에서 코스피 숫자를 읽어옵니다.
+            // 첫 번째 줄: 코스피 데이터(F1, G1) 가져오기
             if (cols.length >= 7 && cols[5].trim() !== '') {
-              // 따옴표나 쉼표 등 불순물 제거
               const cleanPrice = cols[5].replace(/"/g, '').replace(/,/g, '').trim();
               const cleanChange = cols[6].replace(/"/g, '').replace(/,/g, '').trim();
-              
               const kospiPrice = parseFloat(cleanPrice).toFixed(2);
               const kospiChange = parseFloat(cleanChange).toFixed(2);
 
               if (!isNaN(kospiPrice)) {
-                let color = '#333';
-                let sign = '';
+                let color = '#333'; let sign = '';
                 if (kospiChange > 0) { color = '#d32f2f'; sign = '+'; }
                 else if (kospiChange < 0) { color = '#1976d2'; }
-
                 document.getElementById('kospi-number').innerHTML = 
                   `<span style="font-size: 28px; font-weight: bold; color: ${color};">${kospiPrice}</span> 
                    <span style="font-size: 15px; color: ${color}; margin-left: 8px;">(${sign}${kospiChange}%)</span>`;
               }
-            } else {
-              document.getElementById('kospi-number').innerHTML = `<span style="font-size: 14px; color: #d32f2f;">구글 시트 F1, G1 칸에 수식을 넣어주세요.</span>`;
             }
             return; 
           }
           
+          // 두 번째 줄(index === 1): H2 칸의 '주간 인사이트' 텍스트 가져오기
+          if (index === 1) {
+            if (cols.length >= 8 && cols[7].trim() !== '') {
+              const insightText = cols[7].replace(/"/g, '').trim();
+              document.getElementById('weekly-insight').innerText = insightText;
+            } else {
+              document.getElementById('weekly-insight').innerText = "구글 시트(H2)에 이번 주 코멘트를 남겨보세요!";
+            }
+          }
+
+          // 그래프용 데이터 적재 (A열~E열)
           if (cols.length >= 3) {
             labels.push(cols[0].replace(/"/g, '').trim()); 
             posData.push(parseFloat(cols[1].replace(/"/g, '').trim())); 
@@ -172,7 +214,7 @@
           }
         });
 
-        // 그래프 렌더링
+        // 그래프 그리기
         const ctxPresident = document.getElementById('poll-chart-president').getContext('2d');
         new Chart(ctxPresident, {
           type: 'line',
