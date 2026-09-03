@@ -13,12 +13,13 @@
     .full-width { grid-column: 1 / -1; }
     .poll-source { text-align: right; font-size: 12px; color: #888; margin-top: 10px; }
     
-    /* D-Day 카드 특별 스타일 (파란색 그라데이션) */
     .dday-card { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; text-align: center; }
     .dday-card h3 { color: white; margin-bottom: 5px; }
     
-    /* 인사이트 카드 특별 스타일 (노란색 띠) */
     .insight-card { border-left: 6px solid #ffca28; background-color: #fffdf5; }
+    #insight-input { width: 100%; height: 80px; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: none; font-family: inherit; font-size: 14px; box-sizing: border-box; background-color: white;}
+    #save-btn { margin-top: 10px; padding: 8px 15px; background: #ffca28; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: #333; }
+    #save-btn:hover { background: #ffc107; }
     
     @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } }
   </style>
@@ -30,7 +31,7 @@
 
   <div class="grid-container">
     
-    <!-- 1층: D-Day 카운터 및 주간 인사이트 (새로 추가됨) -->
+    <!-- 1층: D-Day 카운터 및 주간 인사이트 -->
     <div class="card dday-card">
       <h3>🗳️ 다음 대통령 선거</h3>
       <div id="dday-counter" style="font-size: 32px; font-weight: bold; margin: 10px 0;">계산 중...</div>
@@ -39,12 +40,14 @@
 
     <div class="card insight-card">
       <h3>💡 나의 주간 인사이트</h3>
-      <div id="weekly-insight" style="font-size: 15px; line-height: 1.6; color: #444; margin-top: 10px; word-break: keep-all;">
-        구글 시트(H2 칸)에서 인사이트를 불러오는 중...
+      <textarea id="insight-input" placeholder="메모를 불러오는 중..."></textarea>
+      <div>
+        <button id="save-btn" onclick="saveInsight()">서버에 동기화</button>
+        <span id="save-msg" style="margin-left: 10px; font-size: 13px; color: #d32f2f; font-weight: bold;"></span>
       </div>
     </div>
 
-    <!-- 2층: 경제 지표 (코스피, 환율) -->
+    <!-- 2층: 경제 지표 -->
     <div class="card">
       <h3>코스피 (KOSPI)</h3>
       <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">구글 시트 데이터 로딩 중...</div>
@@ -57,123 +60,112 @@
       <div class="tradingview-widget-container">
         <div class="tradingview-widget-container__widget"></div>
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
-        {
-        "symbol": "FX_IDC:USDKRW",
-        "width": "100%",
-        "height": "220",
-        "locale": "kr",
-        "dateRange": "1M",
-        "colorTheme": "light",
-        "isTransparent": true,
-        "autosize": false,
-        "largeChartUrl": ""
-        }
+        { "symbol": "FX_IDC:USDKRW", "width": "100%", "height": "220", "locale": "kr", "dateRange": "1M", "colorTheme": "light", "isTransparent": true, "autosize": false, "largeChartUrl": "" }
         </script>
       </div>
     </div>
 
-    <!-- 3층: 대통령 국정 지지율 그래프 -->
+    <!-- 3층, 4층, 5층: 그래프 및 뉴스 -->
     <div class="card full-width">
       <h3>📈 대통령 국정 지지율 추이</h3>
-      <div style="height: 300px; width: 100%;">
-        <canvas id="poll-chart-president"></canvas>
-      </div>
-      <div class="poll-source">* 구글 스프레드시트 연동</div>
+      <div style="height: 300px; width: 100%;"><canvas id="poll-chart-president"></canvas></div>
     </div>
 
-    <!-- 4층: 정당 지지율 그래프 -->
     <div class="card full-width">
       <h3>📈 주요 정당 지지율 추이</h3>
-      <div style="height: 300px; width: 100%;">
-        <canvas id="poll-chart-party"></canvas>
-      </div>
-      <div class="poll-source">* 구글 스프레드시트 연동</div>
+      <div style="height: 300px; width: 100%;"><canvas id="poll-chart-party"></canvas></div>
     </div>
 
-    <!-- 5층: 뉴스 게시판 (한국갤럽, 리얼미터) -->
     <div class="card">
       <h3>📰 한국갤럽 지지율 뉴스</h3>
       <div style="margin-top: 15px; font-size: 14px; color: #555;">
-        <ul id="news-list-gallup" style="list-style-type: disc; padding-left: 20px; line-height: 1.8;">
-          <li>뉴스 불러오는 중...</li>
-        </ul>
+        <ul id="news-list-gallup" style="list-style-type: disc; padding-left: 20px; line-height: 1.8;"><li>뉴스 로딩 중...</li></ul>
       </div>
     </div>
 
     <div class="card">
       <h3>📰 리얼미터 지지율 뉴스</h3>
       <div style="margin-top: 15px; font-size: 14px; color: #555;">
-        <ul id="news-list-realmeter" style="list-style-type: disc; padding-left: 20px; line-height: 1.8;">
-          <li>뉴스 불러오는 중...</li>
-        </ul>
+        <ul id="news-list-realmeter" style="list-style-type: disc; padding-left: 20px; line-height: 1.8;"><li>뉴스 로딩 중...</li></ul>
       </div>
     </div>
 
   </div>
 
   <script>
-    // 1. D-Day 카운터 계산 (2027년 3월 3일 기준)
+    // ==========================================
+    // 🚨 여기에 2단계에서 복사한 '웹 앱 URL'을 붙여넣으세요! (따옴표 안에)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzIqIdWtcHPyoP22XYunAZdr4bl-p1OQgxbBc5D0F7yH6Fx7-dwY4sLr7PkX_hvOkI7/exec";
+    // ==========================================
+
+    const insightBox = document.getElementById('insight-input');
+    const msg = document.getElementById('save-msg');
+
+    // 홈페이지 열릴 때 서버(구글 시트)에서 메모 불러오기
+    fetch(GAS_URL)
+      .then(res => res.text())
+      .then(text => {
+        insightBox.value = text;
+        insightBox.placeholder = "여기에 메모를 입력하세요...";
+      })
+      .catch(err => { insightBox.placeholder = "연결 지연..."; });
+
+    // 저장 버튼 누르면 서버(구글 시트)로 메모 보내기
+    function saveInsight() {
+      msg.innerText = "저장 중...";
+      fetch(GAS_URL + '?action=save&memo=' + encodeURIComponent(insightBox.value))
+        .then(res => res.text())
+        .then(text => {
+          msg.innerText = "서버 동기화 완료!";
+          setTimeout(() => { msg.innerText = ""; }, 2000);
+        })
+        .catch(err => { msg.innerText = "저장 실패"; });
+    }
+
+    // 1. D-Day 카운터
     function calculateDday() {
       const dday = new Date("2027-03-03T00:00:00+09:00");
       const today = new Date();
       const gap = dday.getTime() - today.getTime();
       const days = Math.ceil(gap / (1000 * 60 * 60 * 24));
-      
-      let ddayText = "";
-      if (days > 0) ddayText = `D - ${days}`;
-      else if (days === 0) ddayText = "D - Day";
-      else ddayText = `D + ${Math.abs(days)}`;
-      
+      let ddayText = days > 0 ? `D - ${days}` : (days === 0 ? "D - Day" : `D + ${Math.abs(days)}`);
       document.getElementById('dday-counter').innerText = ddayText;
     }
     calculateDday();
 
-    // 2. 코스피 차트 이미지 실시간 갱신 (30초)
-    setInterval(function() {
-      document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now();
-    }, 30000);
+    // 2. 코스피 차트 갱신
+    setInterval(function() { document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now(); }, 30000);
 
-    // 3. 구글 뉴스 가져오기
+    // 3. 구글 뉴스
     function fetchNews(keyword, elementId) {
       const rssUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(keyword) + '&hl=ko&gl=KR&ceid=KR:ko';
-      const apiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl);
-
-      fetch(apiUrl)
+      fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
         .then(res => res.json())
         .then(data => {
           if (data.status === 'ok') {
-            const items = data.items.slice(0, 5); 
             let newsHtml = '';
-            items.forEach(item => {
+            data.items.slice(0, 5).forEach(item => {
               newsHtml += `<li><a href="${item.link}" target="_blank" style="color: #2c3e50; text-decoration: none;">${item.title}</a></li>`;
             });
             document.getElementById(elementId).innerHTML = newsHtml;
           }
-        })
-        .catch(err => console.log("뉴스 로딩 지연"));
+        });
     }
-
     fetchNews('한국갤럽 지지율', 'news-list-gallup');
     fetchNews('리얼미터 지지율', 'news-list-realmeter');
 
-    // 4. 만능 구글 시트 연동 (코스피 수치 + 그래프 + 주간 인사이트)
+    // 4. 구글 시트 데이터 (코스피 + 그래프)
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcrpXqyXnwBL7AJ7K51EtGS64VAVHzPGswF-dCXE9LVMFSZZS040xdhkrqkyrccJs1LbGYRvetNIgm/pub?output=csv';
-    
     fetch(sheetUrl + '&nocache=' + Date.now())
       .then(res => res.text())
       .then(csv => {
         const rows = csv.split('\n').filter(row => row.trim() !== '');
-        const labels = [];
-        const posData = []; 
-        const negData = []; 
-        const partyAData = []; 
-        const partyBData = []; 
+        const labels = [], posData = [], negData = [], partyAData = [], partyBData = []; 
 
         rows.forEach((row, index) => {
-          const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // 쉼표 포함 문자열 안전 분리
+          const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
           
           if (index === 0) { 
-            // 첫 번째 줄: 코스피 데이터(F1, G1) 가져오기
             if (cols.length >= 7 && cols[5].trim() !== '') {
               const cleanPrice = cols[5].replace(/"/g, '').replace(/,/g, '').trim();
               const cleanChange = cols[6].replace(/"/g, '').replace(/,/g, '').trim();
@@ -191,18 +183,7 @@
             }
             return; 
           }
-          
-          // 두 번째 줄(index === 1): H2 칸의 '주간 인사이트' 텍스트 가져오기
-          if (index === 1) {
-            if (cols.length >= 8 && cols[7].trim() !== '') {
-              const insightText = cols[7].replace(/"/g, '').trim();
-              document.getElementById('weekly-insight').innerText = insightText;
-            } else {
-              document.getElementById('weekly-insight').innerText = "구글 시트(H2)에 이번 주 코멘트를 남겨보세요!";
-            }
-          }
 
-          // 그래프용 데이터 적재 (A열~E열)
           if (cols.length >= 3) {
             labels.push(cols[0].replace(/"/g, '').trim()); 
             posData.push(parseFloat(cols[1].replace(/"/g, '').trim())); 
@@ -214,35 +195,24 @@
           }
         });
 
-        // 그래프 그리기
-        const ctxPresident = document.getElementById('poll-chart-president').getContext('2d');
-        new Chart(ctxPresident, {
+        new Chart(document.getElementById('poll-chart-president').getContext('2d'), {
           type: 'line',
-          data: {
-            labels: labels,
-            datasets: [
-              { label: '긍정 평가 (%)', data: posData, borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)', borderWidth: 2, pointBackgroundColor: '#1976d2', tension: 0.3, fill: true }, 
-              { label: '부정 평가 (%)', data: negData, borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)', borderWidth: 2, pointBackgroundColor: '#d32f2f', tension: 0.3, fill: true } 
-            ]
-          },
+          data: { labels: labels, datasets: [
+            { label: '긍정 평가 (%)', data: posData, borderColor: '#1976d2', backgroundColor: 'rgba(25, 118, 210, 0.1)', borderWidth: 2, pointBackgroundColor: '#1976d2', tension: 0.3, fill: true }, 
+            { label: '부정 평가 (%)', data: negData, borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.1)', borderWidth: 2, pointBackgroundColor: '#d32f2f', tension: 0.3, fill: true } 
+          ]},
           options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
         });
 
-        const ctxParty = document.getElementById('poll-chart-party').getContext('2d');
-        new Chart(ctxParty, {
+        new Chart(document.getElementById('poll-chart-party').getContext('2d'), {
           type: 'line',
-          data: {
-            labels: labels,
-            datasets: [
-              { label: '더불어민주당 (%)', data: partyBData, borderColor: '#004ea2', backgroundColor: 'rgba(0, 78, 162, 0.1)', borderWidth: 2, pointBackgroundColor: '#004ea2', tension: 0.3, fill: true }, 
-              { label: '국민의힘 (%)', data: partyAData, borderColor: '#e61e2b', backgroundColor: 'rgba(230, 30, 43, 0.1)', borderWidth: 2, pointBackgroundColor: '#e61e2b', tension: 0.3, fill: true } 
-            ]
-          },
+          data: { labels: labels, datasets: [
+            { label: '더불어민주당 (%)', data: partyBData, borderColor: '#004ea2', backgroundColor: 'rgba(0, 78, 162, 0.1)', borderWidth: 2, pointBackgroundColor: '#004ea2', tension: 0.3, fill: true }, 
+            { label: '국민의힘 (%)', data: partyAData, borderColor: '#e61e2b', backgroundColor: 'rgba(230, 30, 43, 0.1)', borderWidth: 2, pointBackgroundColor: '#e61e2b', tension: 0.3, fill: true } 
+          ]},
           options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } }, plugins: { legend: { position: 'bottom' } } }
         });
-
-      })
-      .catch(err => console.log("데이터를 불러오는 데 실패했습니다."));
+      });
   </script>
 </body>
 </html>
