@@ -20,8 +20,14 @@
     .insight-card { border-left: 6px solid #ffca28; background-color: #fffdf5; }
     #insight-input { width: 100%; height: 80px; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: none; font-family: inherit; font-size: 14px; box-sizing: border-box; background-color: white;}
     #save-btn { margin-top: 10px; padding: 8px 15px; background: #ffca28; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: #333; }
-    #save-btn:hover { background: #ffc107; }
     
+    /* AI 분석 카드 스타일 */
+    .ai-card { border: 2px solid #6a11cb; background: #fcfbfe; }
+    .ai-card h3 { color: #6a11cb; }
+    #ai-btn { padding: 12px 20px; background: linear-gradient(135deg, #6a11cb, #2575fc); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: 0.3s;}
+    #ai-btn:hover { opacity: 0.9; transform: scale(1.02); }
+    #ai-result { margin-top: 15px; font-size: 15px; line-height: 1.7; color: #333; display: none; background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0d4f5; box-shadow: 0 2px 4px rgba(106,17,203,0.05); }
+
     @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -32,7 +38,7 @@
 
   <div class="grid-container">
     
-    <!-- 1층: D-Day 카운터 (국회의원 선거) 및 주간 인사이트 -->
+    <!-- 1층: D-Day 카운터 및 주간 인사이트 -->
     <div class="card dday-card">
       <h3>🗳️ 다음 국회의원 선거</h3>
       <div id="dday-counter" style="font-size: 32px; font-weight: bold; margin: 10px 0;">계산 중...</div>
@@ -51,12 +57,21 @@
       </div>
     </div>
 
-    <!-- 2층: 경제 지표 -->
+    <!-- 2층: AI 종합 분석 브리핑 (새로 추가됨!) -->
+    <div class="card full-width ai-card" style="text-align: center;">
+      <h3>✨ AI 주간 종합 브리핑</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">제미나이(Gemini) AI가 현재 수집된 경제 및 정치 지표를 종합 분석합니다.</p>
+      <button id="ai-btn" onclick="runAI()">🤖 리서치 센터장 AI에게 분석 맡기기</button>
+      <div id="ai-result" style="text-align: left;">
+        분석 중입니다. 잠시만 기다려주세요...
+      </div>
+    </div>
+
+    <!-- 3층: 경제 지표 -->
     <div class="card">
       <h3>코스피 (KOSPI)</h3>
       <div id="kospi-number" style="margin-top: 5px; margin-bottom: 15px; font-family: sans-serif;">구글 시트 데이터 로딩 중...</div>
       <img id="kospi-chart" src="https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png" alt="실시간 코스피 차트" style="width: 100%; border-radius: 4px;">
-      <div class="poll-source">* 구글 파이낸스 연동</div>
     </div>
 
     <div class="card">
@@ -69,7 +84,7 @@
       </div>
     </div>
 
-    <!-- 3층, 4층, 5층: 그래프 및 뉴스 -->
+    <!-- 4층, 5층, 6층: 그래프 및 뉴스 -->
     <div class="card full-width">
       <h3>📈 대통령 국정 지지율 추이</h3>
       <div style="height: 300px; width: 100%;"><canvas id="poll-chart-president"></canvas></div>
@@ -98,10 +113,14 @@
 
   <script>
     // ==========================================
-    // 🚨 여기에 2단계에서 복사한 '웹 앱 URL'을 다시 붙여넣으세요! (따옴표 안에)
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzIqIdWtcHPyoP22XYunAZdr4bl-p1OQgxbBc5D0F7yH6Fx7-dwY4sLr7PkX_hvOkI7/exec";
+    // 🚨 여기에 새로 배포한 '웹 앱 URL'을 다시 붙여넣으세요! (따옴표 안에)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbybd3nH_oJoNIQAAkZWE4Wfc38ACGKTBU6_guFlmayd59qKtV3RrNbqhyjumQ14Qmcr/exec";
     // ==========================================
 
+    // AI 분석에 쓸 최신 데이터를 담아둘 변수
+    window.dashboardData = { kospi: "-", pos: "-", neg: "-", partyA: "-", partyB: "-" };
+
+    // 1. 메모 읽고 쓰기
     const insightBox = document.getElementById('insight-input');
     const msg = document.getElementById('save-msg');
 
@@ -124,29 +143,62 @@
         .catch(err => { msg.innerText = "저장 실패"; });
     }
 
-    // 1. D-Day 카운터 (2028년 국회의원 선거 기준)
+    // 2. AI 브리핑 요청 함수
+    function runAI() {
+      const aiBtn = document.getElementById('ai-btn');
+      const aiResult = document.getElementById('ai-result');
+      
+      aiBtn.style.display = 'none'; 
+      aiResult.style.display = 'block'; 
+      aiResult.innerHTML = "<strong>잠시만 기다려주세요! ⏳</strong><br><br>AI가 현재 코스피 지수와 여론조사 데이터를 수집하여 종합 분석을 작성하고 있습니다... (약 10초 소요)";
+
+      // AI에게 전달할 프롬프트(명령어) 조합
+      const prompt = `당신은 최고 수준의 증권사 리서치 센터장이자 정치/경제 평론가입니다. 
+      현재 대한민국의 실시간 지표는 다음과 같습니다. 
+      - 코스피 지수: ${window.dashboardData.kospi}
+      - 대통령 국정 지지율: 긍정 ${window.dashboardData.pos}%, 부정 ${window.dashboardData.neg}%
+      - 정당 지지율: 더불어민주당 ${window.dashboardData.partyB}%, 국민의힘 ${window.dashboardData.partyA}%
+      - 나의 인사이트 메모: ${insightBox.value}
+      
+      이 숫자들의 흐름과 메모를 종합적으로 분석하여, 현재 시장 심리와 정치 지형의 연관성을 파악해 주세요. 
+      결과는 아주 논리적이고 통찰력 있는 '주간 브리핑' 형태로, 3~4문장으로 핵심만 짧고 명확하게 요약해서 알려주세요.`;
+
+      // 앱스 스크립트로 데이터 보내기
+      fetch(GAS_URL + '?action=analyze&prompt=' + encodeURIComponent(prompt))
+        .then(res => res.text())
+        .then(text => {
+          // 마크다운 줄바꿈을 HTML로 변환하여 출력
+          aiResult.innerHTML = `<strong>[📈 AI 종합 브리핑]</strong><br><br>` + text.replace(/\n/g, '<br>');
+          aiBtn.style.display = 'inline-block';
+          aiBtn.innerText = "🔄 새로운 분석 다시 받기";
+        })
+        .catch(err => {
+          aiResult.innerHTML = "<span style='color:red;'>분석을 받아오지 못했습니다. 앱스 스크립트 배포나 API 키를 다시 확인해주세요.</span>";
+          aiBtn.style.display = 'inline-block';
+        });
+    }
+
+    // 3. D-Day 카운터
     function calculateDday() {
       const dday = new Date("2028-04-12T00:00:00+09:00");
       const today = new Date();
       const gap = dday.getTime() - today.getTime();
       const days = Math.ceil(gap / (1000 * 60 * 60 * 24));
-      let ddayText = days > 0 ? `D - ${days}` : (days === 0 ? "D - Day" : `D + ${Math.abs(days)}`);
-      document.getElementById('dday-counter').innerText = ddayText;
+      document.getElementById('dday-counter').innerText = days > 0 ? `D - ${days}` : (days === 0 ? "D - Day" : `D + ${Math.abs(days)}`);
     }
     calculateDday();
 
+    // 4. 차트 이미지 갱신
     setInterval(function() { document.getElementById('kospi-chart').src = 'https://ssl.pstatic.net/imgfinance/chart/main/KOSPI.png?' + Date.now(); }, 30000);
 
+    // 5. 뉴스
     function fetchNews(keyword, elementId) {
-      const rssUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(keyword) + '&hl=ko&gl=KR&ceid=KR:ko';
-      fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(rssUrl))
+      fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent('https://news.google.com/rss/search?q=' + encodeURIComponent(keyword) + '&hl=ko&gl=KR&ceid=KR:ko'))
         .then(res => res.json())
         .then(data => {
           if (data.status === 'ok') {
             let newsHtml = '';
-            data.items.slice(0, 5).forEach(item => {
-              newsHtml += `<li><a href="${item.link}" target="_blank" style="color: #2c3e50; text-decoration: none;">${item.title}</a></li>`;
-            });
+            data.items.slice(0, 5).forEach(item => { newsHtml += `<li><a href="${item.link}" target="_blank" style="color: #2c3e50; text-decoration: none;">${item.title}</a></li>`; });
             document.getElementById(elementId).innerHTML = newsHtml;
           }
         });
@@ -154,6 +206,7 @@
     fetchNews('한국갤럽 지지율', 'news-list-gallup');
     fetchNews('리얼미터 지지율', 'news-list-realmeter');
 
+    // 6. 구글 시트 연동 (그래프 및 데이터)
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRcrpXqyXnwBL7AJ7K51EtGS64VAVHzPGswF-dCXE9LVMFSZZS040xdhkrqkyrccJs1LbGYRvetNIgm/pub?output=csv';
     fetch(sheetUrl + '&nocache=' + Date.now())
       .then(res => res.text())
@@ -166,12 +219,12 @@
           
           if (index === 0) { 
             if (cols.length >= 7 && cols[5].trim() !== '') {
-              const cleanPrice = cols[5].replace(/"/g, '').replace(/,/g, '').trim();
-              const cleanChange = cols[6].replace(/"/g, '').replace(/,/g, '').trim();
-              const kospiPrice = parseFloat(cleanPrice).toFixed(2);
-              const kospiChange = parseFloat(cleanChange).toFixed(2);
-
+              const kospiPrice = parseFloat(cols[5].replace(/"/g, '').replace(/,/g, '').trim()).toFixed(2);
+              const kospiChange = parseFloat(cols[6].replace(/"/g, '').replace(/,/g, '').trim()).toFixed(2);
+              
               if (!isNaN(kospiPrice)) {
+                window.dashboardData.kospi = kospiPrice; // AI에게 전달할 데이터 저장
+                
                 let color = '#333'; let sign = '';
                 if (kospiChange > 0) { color = '#d32f2f'; sign = '+'; }
                 else if (kospiChange < 0) { color = '#1976d2'; }
@@ -193,6 +246,14 @@
             partyBData.push(parseFloat(cols[4].replace(/"/g, '').trim())); 
           }
         });
+
+        // AI에게 전달할 최신 지지율 데이터 저장 (가장 마지막에 입력된 줄의 데이터)
+        if (posData.length > 0) {
+          window.dashboardData.pos = posData[posData.length - 1];
+          window.dashboardData.neg = negData[negData.length - 1];
+          window.dashboardData.partyA = partyAData[partyAData.length - 1];
+          window.dashboardData.partyB = partyBData[partyBData.length - 1];
+        }
 
         new Chart(document.getElementById('poll-chart-president').getContext('2d'), {
           type: 'line',
